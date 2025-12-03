@@ -130,7 +130,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
     g_nScreenHeight = GetSystemMetrics(SM_CYSCREEN);
 
     g_hWnd = CreateWindowEx(
-        WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
+        WS_EX_TOPMOST | WS_EX_TOOLWINDOW,  // 移除 WS_EX_LAYERED
         TEXT("DeskPetFace"),
         TEXT("Desk Pet Face"),
         WS_POPUP,
@@ -140,8 +140,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
     if (!g_hWnd)
         return FALSE;
 
-    // 以纯白色为透明色键（可根据你的 bmp 背景调整）
-    SetLayeredWindowAttributes(g_hWnd, RGB(255, 255, 255), 255, LWA_COLORKEY | LWA_ALPHA);
+    // 移除透明色键设置，恢复白色背景
+    // SetLayeredWindowAttributes(g_hWnd, RGB(255, 255, 255), 255, LWA_COLORKEY | LWA_ALPHA);
 
     g_hdcMem = CreateCompatibleDC(NULL);
 
@@ -433,13 +433,21 @@ void UpdateTypingSpeed()
     // 根据速度选表情区间
     int baseIndex = 0;
     if (g_nTypingSpeed >= 10)
-        baseIndex = 9;   // 红温：cinna_7~10
+        baseIndex = 6;   // 红温：cinna_7~9（索引6-8）
     else if (g_nTypingSpeed >= 3)
-        baseIndex = 2;   // 一般：cinna_3~9
+        baseIndex = 2;   // 一般：cinna_3~8（索引2-8）
     else
-        baseIndex = 0;   // 悠闲：cinna_1~2
+        baseIndex = 0;   // 悠闲：cinna_1~2（索引0-1）
 
-    int newTarget = baseIndex + (rand() % 3);
+    int range = 0;
+    if (g_nTypingSpeed >= 10)
+        range = 3;   // 红温：3个表情(6-8)
+    else if (g_nTypingSpeed >= 3)
+        range = 7;   // 一般：7个表情(2-8)
+    else
+        range = 2;   // 悠闲：2个表情(0-1)
+
+    int newTarget = baseIndex + (rand() % range);
 
     g_targetEmotion   = newTarget;
     g_emotionProgress = 0.0f;   // 从 0 开始插值
@@ -453,7 +461,7 @@ void UpdateEmotion()
 {
     if (g_currentEmotion != g_targetEmotion)
     {
-        g_emotionProgress += 0.05f;  // 调整这个可以控制过渡时间
+        g_emotionProgress += 0.1f;  // 调整为0.1f，1秒内完成过渡（100ms*10次=1秒）
 
         if (g_emotionProgress >= 1.0f)
         {
@@ -520,6 +528,8 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
             {
                 g_nKeyCount++;
                 g_totalChars++;
+                // 实时更新界面显示
+                InvalidateRect(g_hWnd, NULL, FALSE);
             }
         }
     }
